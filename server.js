@@ -1,5 +1,4 @@
 import express from "express";
-import { ObjectId } from "mongodb";
 import { getDB } from "./rent.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -60,12 +59,10 @@ app.post("/register", async (req, res) => {
 
         const { full_name, email, username, password } = req.body;
 
-        // Check if all fields are provided
         if (!full_name || !email || !username || !password) {
             return res.status(400).json({ message: "All fields are required" });
         }
 
-        // Check if username or email already exists
         const existingUser = await db.collection("users").findOne({
             $or: [{ email }, { username }],
         });
@@ -74,7 +71,6 @@ app.post("/register", async (req, res) => {
             return res.status(400).json({ message: "Email or username already in use" });
         }
 
-        // Hash password before storing
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
@@ -93,7 +89,6 @@ app.post("/register", async (req, res) => {
     }
 });
 
-// User Login Endpoint
 app.post("/login", async (req, res) => {
     try {
         const db = getDB();
@@ -101,25 +96,21 @@ app.post("/login", async (req, res) => {
 
         const { username, password } = req.body;
 
-        // Check if both fields are provided
         if (!username || !password) {
             return res.status(400).json({ message: "Username and password are required" });
         }
 
-        // Find user by username
         const user = await db.collection("users").findOne({ username });
 
         if (!user) {
             return res.status(400).json({ message: "Invalid username" });
         }
 
-        // Compare hashed password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: "Invalid password" });
         }
 
-        // Generate JWT token
         const token = jwt.sign(
             { userId: user._id, full_name: user.full_name, username: user.username, email: user.email }, 
             JWT_SECRET, 
@@ -154,13 +145,11 @@ app.get("/rental-cars", async (req, res) => {
         const { year, color, steering_type, number_of_seats } = req.query;
         let filter = {};
 
-        // Apply filters if they exist in query params
-        if (year) filter.year = parseInt(year); // Convert year to integer
+        if (year) filter.year = parseInt(year);
         if (color) filter.color = color;
         if (steering_type) filter.steering_type = steering_type;
-        if (number_of_seats) filter.number_of_seats = parseInt(number_of_seats); // Convert to integer
+        if (number_of_seats) filter.number_of_seats = parseInt(number_of_seats);
 
-        // Fetch available cars sorted by price_per_day (ascending)
         const cars = await db.collection("cars").find(filter).sort({ price_per_day: 1 }).toArray();
 
         res.status(200).json(cars);
